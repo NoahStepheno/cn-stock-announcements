@@ -35,11 +35,17 @@ class StockAnnouncementPlugin:
         Query announcements.
         :param stock_codes: List of stock codes (e.g. ['000001', '600000'])
         :param keyword: Search keyword (e.g. '年报')
-        :param start_date: Start date string 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD'
-        :param end_date: End date string 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD'
+        :param start_date: Start date string 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD', 不传默认为近3天
+        :param end_date: End date string 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD', 不传默认为今天
         :param limit: Max number of results per exchange
         :return: Dict containing lists of announcements for 'SZSE' and 'SSE'
         """
+        # 默认近3天
+        today = datetime.now().strftime("%Y-%m-%d")
+        three_days_ago = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+        start_date = start_date[:10] if start_date else three_days_ago
+        end_date = end_date[:10] if end_date else today
+
         szse_stocks = [s for s in (stock_codes or []) if s.startswith("0") or s.startswith("3")]
         sse_stocks = [s for s in (stock_codes or []) if s.startswith("6") or s.startswith("9")]
         
@@ -61,9 +67,7 @@ class StockAnnouncementPlugin:
         url = "http://www.szse.cn/api/disc/announcement/annList?random=" + str(time.time())
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         
-        se_date = ["", ""]
-        if start_date: se_date[0] = start_date[:10]
-        if end_date: se_date[1] = end_date[:10]
+        se_date = [start_date[:10] if len(start_date) > 10 else start_date, end_date[:10] if len(end_date) > 10 else end_date]
 
         payload = {
             "seDate": se_date,
@@ -111,8 +115,8 @@ class StockAnnouncementPlugin:
         }
         
         product_id = ",".join(stock_codes) if stock_codes else ""
-        begin_d = start_date[:10] if start_date else (datetime.now() - timedelta(days=365*3)).strftime("%Y-%m-%d")
-        end_d = end_date[:10] if end_date else datetime.now().strftime("%Y-%m-%d")
+        begin_d = start_date[:10] if len(start_date) > 10 else start_date
+        end_d = end_date[:10] if len(end_date) > 10 else end_date
         
         params = {
             "isPagination": "true",
@@ -149,6 +153,6 @@ class StockAnnouncementPlugin:
 # Example usage for testing:
 if __name__ == "__main__":
     plugin = StockAnnouncementPlugin()
-    res = plugin.query_announcements(keyword="年报", start_date="2024-03-15 00:00:01", end_date="2024-03-16 00:00:01", limit=2)
+    res = plugin.query_announcements(limit=20)
     import json
     print(json.dumps(res, indent=2, ensure_ascii=False))
